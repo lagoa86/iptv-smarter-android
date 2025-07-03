@@ -5,7 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Monitor, Play } from "lucide-react";
 
-export const Series = ({ series, onSeriesSelect }) => {
+interface Series {
+  id: string;
+  name: string;
+  group: string;
+  logo?: string;
+}
+
+interface SeriesProps {
+  series: Series[];
+  onSeriesSelect: (series: Series) => void;
+}
+
+export const Series = ({ series, onSeriesSelect }: SeriesProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("all");
 
@@ -61,8 +73,12 @@ export const Series = ({ series, onSeriesSelect }) => {
                     alt={show.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const nextSibling = target.nextSibling as HTMLElement;
+                      if (nextSibling) {
+                        nextSibling.style.display = 'flex';
+                      }
                     }}
                   />
                 ) : null}

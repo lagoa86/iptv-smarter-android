@@ -5,11 +5,23 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Tv, Play } from "lucide-react";
 
-export const TVChannels = ({ channels, onChannelSelect }) => {
+interface Channel {
+  id: string;
+  name: string;
+  group: string;
+  logo?: string;
+}
+
+interface TVChannelsProps {
+  channels: Channel[];
+  onChannelSelect: (channel: Channel) => void;
+}
+
+export const TVChannels = ({ channels, onChannelSelect }: TVChannelsProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("all");
 
-  const groups = ["all", ...new Set(channels.map(ch => ch.group))];
+  const groups = ["all", ...new Set(channels.map(channel => channel.group))];
   
   const filteredChannels = channels.filter(channel => {
     const matchesSearch = channel.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -46,45 +58,45 @@ export const TVChannels = ({ channels, onChannelSelect }) => {
       </div>
 
       {/* Channels Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
         {filteredChannels.map((channel) => (
           <Card 
             key={channel.id}
             className="group hover:bg-secondary/50 transition-all duration-200 cursor-pointer hover:scale-105 bg-card/50 backdrop-blur-sm"
             onClick={() => onChannelSelect(channel)}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
+            <CardContent className="p-3">
+              <div className="aspect-video bg-secondary/50 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
                 {channel.logo ? (
                   <img
                     src={channel.logo}
                     alt={channel.name}
-                    className="w-12 h-12 rounded-lg object-cover bg-secondary"
+                    className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const nextSibling = target.nextSibling as HTMLElement;
+                      if (nextSibling) {
+                        nextSibling.style.display = 'flex';
+                      }
                     }}
                   />
                 ) : null}
-                <div
-                  className={`w-12 h-12 bg-primary/20 rounded-lg flex items-center justify-center ${channel.logo ? 'hidden' : 'flex'}`}
-                >
+                <div className={`absolute inset-0 flex items-center justify-center bg-primary/20 ${channel.logo ? 'hidden' : 'flex'}`}>
                   <Tv className="w-6 h-6 text-primary" />
                 </div>
                 
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                    {channel.name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground truncate">
-                    {channel.group}
-                  </p>
-                </div>
-                
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Play className="w-5 h-5 text-primary" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <Play className="w-6 h-6 text-white" />
                 </div>
               </div>
+              
+              <h3 className="font-medium text-foreground text-xs truncate group-hover:text-primary transition-colors">
+                {channel.name}
+              </h3>
+              <p className="text-xs text-muted-foreground truncate mt-1">
+                {channel.group}
+              </p>
             </CardContent>
           </Card>
         ))}

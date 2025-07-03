@@ -5,7 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Film, Play } from "lucide-react";
 
-export const Movies = ({ movies, onMovieSelect }) => {
+interface Movie {
+  id: string;
+  name: string;
+  group: string;
+  logo?: string;
+}
+
+interface MoviesProps {
+  movies: Movie[];
+  onMovieSelect: (movie: Movie) => void;
+}
+
+export const Movies = ({ movies, onMovieSelect }: MoviesProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("all");
 
@@ -61,8 +73,12 @@ export const Movies = ({ movies, onMovieSelect }) => {
                     alt={movie.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      const nextSibling = target.nextSibling as HTMLElement;
+                      if (nextSibling) {
+                        nextSibling.style.display = 'flex';
+                      }
                     }}
                   />
                 ) : null}
