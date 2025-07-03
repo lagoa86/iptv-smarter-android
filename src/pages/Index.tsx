@@ -1,21 +1,69 @@
 
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tv, Film, Monitor, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tv, Film, Monitor, Settings, Calendar } from "lucide-react";
+import { IPTVLogin } from "@/components/IPTVLogin";
 import { LoadM3U } from "@/components/LoadM3U";
 import { TVChannels } from "@/components/TVChannels";
 import { Movies } from "@/components/Movies";
 import { Series } from "@/components/Series";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { EPGGuide } from "@/components/EPGGuide";
+
+interface IPTVCredentials {
+  username: string;
+  password: string;
+  server: string;
+  port: string;
+}
 
 const Index = () => {
+  const [authMode, setAuthMode] = useState<'login' | 'm3u' | 'authenticated'>('login');
+  const [credentials, setCredentials] = useState<IPTVCredentials | null>(null);
   const [playlist, setPlaylist] = useState(null);
   const [currentVideo, setCurrentVideo] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showEPG, setShowEPG] = useState(false);
+
+  const handleIPTVLogin = async (creds: IPTVCredentials) => {
+    setCredentials(creds);
+    
+    // Simular carregamento de playlist via credenciais IPTV
+    // Em um app real, isso faria uma requisição para a API do provedor IPTV
+    const mockPlaylist = {
+      channels: [
+        {
+          id: '1',
+          name: 'Globo HD',
+          group: 'Abertos',
+          url: `http://${creds.server}:${creds.port}/live/${creds.username}/${creds.password}/1.ts`,
+          logo: 'https://upload.wikimedia.org/wikipedia/commons/8/81/Logotipo_da_Globo.png'
+        },
+        {
+          id: '2',
+          name: 'SBT HD',
+          group: 'Abertos',
+          url: `http://${creds.server}:${creds.port}/live/${creds.username}/${creds.password}/2.ts`,
+          logo: 'https://upload.wikimedia.org/wikipedia/commons/4/41/SBT_logo_2014.svg'
+        }
+      ],
+      movies: [],
+      series: []
+    };
+    
+    setPlaylist(mockPlaylist);
+    setAuthMode('authenticated');
+  };
+
+  const handleSkipLogin = () => {
+    setAuthMode('m3u');
+  };
 
   const handlePlaylistLoad = (playlistData) => {
     setPlaylist(playlistData);
+    setAuthMode('authenticated');
     console.log("Playlist carregada:", playlistData);
   };
 
@@ -28,7 +76,24 @@ const Index = () => {
     setCurrentVideo(null);
   };
 
-  if (!playlist) {
+  const handleEPGClose = () => {
+    setShowEPG(false);
+  };
+
+  // Tela de login IPTV
+  if (authMode === 'login') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary">
+        <IPTVLogin 
+          onLogin={handleIPTVLogin}
+          onSkip={handleSkipLogin}
+        />
+      </div>
+    );
+  }
+
+  // Tela de carregamento M3U
+  if (authMode === 'm3u') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary">
         <LoadM3U onPlaylistLoad={handlePlaylistLoad} />
@@ -36,6 +101,7 @@ const Index = () => {
     );
   }
 
+  // Player de vídeo
   if (currentVideo) {
     return (
       <VideoPlayer 
@@ -46,6 +112,21 @@ const Index = () => {
     );
   }
 
+  // EPG Guide
+  if (showEPG) {
+    return (
+      <EPGGuide 
+        channels={playlist?.channels || []}
+        onClose={handleEPGClose}
+        onProgramSelect={(program, channel) => {
+          console.log("Programa selecionado:", program, "Canal:", channel);
+          setShowEPG(false);
+        }}
+      />
+    );
+  }
+
+  // Interface principal
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary">
       <div className="container mx-auto px-4 py-6">
@@ -57,16 +138,30 @@ const Index = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">IPTV Player</h1>
-              <p className="text-sm text-muted-foreground">Sua experiência de streaming</p>
+              <p className="text-sm text-muted-foreground">
+                {credentials ? `Conectado: ${credentials.server}` : 'Sua experiência de streaming'}
+              </p>
             </div>
           </div>
           
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="p-2 hover:bg-secondary rounded-lg transition-colors"
-          >
-            <Settings className="w-5 h-5 text-muted-foreground" />
-          </button>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowEPG(true)}
+              className="flex items-center space-x-2"
+            >
+              <Calendar className="w-4 h-4" />
+              <span>EPG</span>
+            </Button>
+            
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className="p-2 hover:bg-secondary rounded-lg transition-colors"
+            >
+              <Settings className="w-5 h-5 text-muted-foreground" />
+            </button>
+          </div>
         </div>
 
         {showSettings && (
@@ -94,21 +189,21 @@ const Index = () => {
 
           <TabsContent value="tv" className="animate-fade-in">
             <TVChannels 
-              channels={playlist.channels || []} 
+              channels={playlist?.channels || []} 
               onChannelSelect={handleVideoSelect}
             />
           </TabsContent>
 
           <TabsContent value="movies" className="animate-fade-in">
             <Movies 
-              movies={playlist.movies || []} 
+              movies={playlist?.movies || []} 
               onMovieSelect={handleVideoSelect}
             />
           </TabsContent>
 
           <TabsContent value="series" className="animate-fade-in">
             <Series 
-              series={playlist.series || []} 
+              series={playlist?.series || []} 
               onSeriesSelect={handleVideoSelect}
             />
           </TabsContent>
