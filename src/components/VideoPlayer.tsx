@@ -11,13 +11,24 @@ import {
   Volume2, 
   VolumeX, 
   Maximize, 
-  Settings,
   SkipBack,
   SkipForward
 } from "lucide-react";
 
-export const VideoPlayer = ({ video, onBack, playlist }) => {
-  const videoRef = useRef(null);
+interface VideoPlayerProps {
+  video: {
+    id?: string;
+    name: string;
+    url: string;
+    group: string;
+    logo?: string;
+  };
+  onBack: () => void;
+  playlist?: any;
+}
+
+export const VideoPlayer = ({ video, onBack, playlist }: VideoPlayerProps) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -27,6 +38,8 @@ export const VideoPlayer = ({ video, onBack, playlist }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [selectedAudioTrack, setSelectedAudioTrack] = useState("default");
   const [selectedSubtitle, setSelectedSubtitle] = useState("off");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   // Audio tracks simulados
   const audioTracks = [
@@ -44,59 +57,95 @@ export const VideoPlayer = ({ video, onBack, playlist }) => {
   ];
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
 
-    const updateTime = () => setCurrentTime(video.currentTime);
-    const updateDuration = () => setDuration(video.duration);
+    const updateTime = () => setCurrentTime(videoElement.currentTime);
+    const updateDuration = () => {
+      if (videoElement.duration && !isNaN(videoElement.duration)) {
+        setDuration(videoElement.duration);
+      }
+    };
+    const handleLoadStart = () => setIsLoading(true);
+    const handleCanPlay = () => {
+      setIsLoading(false);
+      setError("");
+    };
+    const handleError = () => {
+      setIsLoading(false);
+      setError("Erro ao carregar o vídeo. Verifique se a URL está correta.");
+      console.error("Erro no vídeo:", videoElement.error);
+    };
 
-    video.addEventListener('timeupdate', updateTime);
-    video.addEventListener('loadedmetadata', updateDuration);
+    videoElement.addEventListener('timeupdate', updateTime);
+    videoElement.addEventListener('loadedmetadata', updateDuration);
+    videoElement.addEventListener('loadstart', handleLoadStart);
+    videoElement.addEventListener('canplay', handleCanPlay);
+    videoElement.addEventListener('error', handleError);
+
+    // Tentar carregar o vídeo
+    videoElement.load();
 
     return () => {
-      video.removeEventListener('timeupdate', updateTime);
-      video.removeEventListener('loadedmetadata', updateDuration);
+      videoElement.removeEventListener('timeupdate', updateTime);
+      videoElement.removeEventListener('loadedmetadata', updateDuration);
+      videoElement.removeEventListener('loadstart', handleLoadStart);
+      videoElement.removeEventListener('canplay', handleCanPlay);
+      videoElement.removeEventListener('error', handleError);
     };
-  }, []);
+  }, [video.url]);
 
-  const togglePlay = () => {
-    const video = videoRef.current;
-    if (isPlaying) {
-      video.pause();
-    } else {
-      video.play();
+  const togglePlay = async () => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+
+    try {
+      if (isPlaying) {
+        videoElement.pause();
+      } else {
+        await videoElement.play();
+      }
+      setIsPlaying(!isPlaying);
+    } catch (error) {
+      console.error("Erro ao reproduzir:", error);
+      setError("Erro ao reproduzir o vídeo.");
     }
-    setIsPlaying(!isPlaying);
   };
 
-  const handleSeek = (value) => {
-    const video = videoRef.current;
-    video.currentTime = value[0];
+  const handleSeek = (value: number[]) => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+    
+    videoElement.currentTime = value[0];
     setCurrentTime(value[0]);
   };
 
-  const handleVolumeChange = (value) => {
-    const video = videoRef.current;
+  const handleVolumeChange = (value: number[]) => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+    
     const newVolume = value[0];
-    video.volume = newVolume;
+    videoElement.volume = newVolume;
     setVolume(newVolume);
     setIsMuted(newVolume === 0);
   };
 
   const toggleMute = () => {
-    const video = videoRef.current;
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+    
     if (isMuted) {
-      video.volume = volume;
+      videoElement.volume = volume;
       setIsMuted(false);
     } else {
-      video.volume = 0;
+      videoElement.volume = 0;
       setIsMuted(true);
     }
   };
 
   const toggleFullscreen = () => {
     if (!isFullscreen) {
-      if (videoRef.current.requestFullscreen) {
+      if (videoRef.current?.requestFullscreen) {
         videoRef.current.requestFullscreen();
       }
     } else {
@@ -107,16 +156,21 @@ export const VideoPlayer = ({ video, onBack, playlist }) => {
     setIsFullscreen(!isFullscreen);
   };
 
-  const formatTime = (time) => {
+  const formatTime = (time: number) => {
+    if (!time || isNaN(time)) return "0:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  const skip = (seconds) => {
-    const video = videoRef.current;
-    video.currentTime = Math.max(0, Math.min(duration, video.currentTime + seconds));
+  const skip = (seconds: number) => {
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
+    
+    videoElement.currentTime = Math.max(0, Math.min(duration, videoElement.currentTime + seconds));
   };
+
+  console.log("Reproduzindo vídeo:", video.name, "URL:", video.url);
 
   return (
     <div className="min-h-screen bg-black flex flex-col">
@@ -140,6 +194,26 @@ export const VideoPlayer = ({ video, onBack, playlist }) => {
 
       {/* Video Container */}
       <div className="flex-1 relative bg-black">
+        {isLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+            <div className="text-white text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+              <p>Carregando...</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+            <div className="text-white text-center">
+              <p className="mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()} variant="outline">
+                Tentar novamente
+              </Button>
+            </div>
+          </div>
+        )}
+
         <video
           ref={videoRef}
           className="w-full h-full object-contain"
@@ -147,10 +221,13 @@ export const VideoPlayer = ({ video, onBack, playlist }) => {
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           onClick={togglePlay}
+          controls={false}
+          preload="metadata"
+          crossOrigin="anonymous"
         />
 
         {/* Video Controls Overlay */}
-        {showControls && (
+        {showControls && !isLoading && !error && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 flex flex-col justify-between p-6">
             {/* Top Controls */}
             <div className="flex justify-end space-x-2">
@@ -299,6 +376,9 @@ export const VideoPlayer = ({ video, onBack, playlist }) => {
                 <p className="text-sm text-muted-foreground mt-2">
                   Áudio: {audioTracks.find(t => t.id === selectedAudioTrack)?.name} | 
                   Legenda: {subtitleTracks.find(t => t.id === selectedSubtitle)?.name}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  URL: {video.url}
                 </p>
               </div>
             </div>

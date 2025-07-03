@@ -9,6 +9,7 @@ interface Channel {
   id: string;
   name: string;
   group: string;
+  url: string;
   logo?: string;
 }
 
@@ -44,9 +45,9 @@ export const TVChannels = ({ channels, onChannelSelect }: TVChannelsProps) => {
         </div>
         
         <div className="flex flex-wrap gap-2">
-          {groups.slice(0, 6).map(group => (
+          {groups.slice(0, 6).map((group, index) => (
             <Badge
-              key={group}
+              key={`group-${index}-${group}`}
               variant={selectedGroup === group ? "default" : "secondary"}
               className="cursor-pointer hover:bg-primary/80"
               onClick={() => setSelectedGroup(group)}
@@ -58,10 +59,10 @@ export const TVChannels = ({ channels, onChannelSelect }: TVChannelsProps) => {
       </div>
 
       {/* Channels Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
-        {filteredChannels.map((channel) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {filteredChannels.map((channel, index) => (
           <Card 
-            key={channel.id}
+            key={`channel-${channel.id || index}`}
             className="group hover:bg-secondary/50 transition-all duration-200 cursor-pointer hover:scale-105 bg-card/50 backdrop-blur-sm"
             onClick={() => onChannelSelect(channel)}
           >
@@ -83,15 +84,15 @@ export const TVChannels = ({ channels, onChannelSelect }: TVChannelsProps) => {
                   />
                 ) : null}
                 <div className={`absolute inset-0 flex items-center justify-center bg-primary/20 ${channel.logo ? 'hidden' : 'flex'}`}>
-                  <Tv className="w-6 h-6 text-primary" />
+                  <Tv className="w-8 h-8 text-primary" />
                 </div>
                 
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Play className="w-6 h-6 text-white" />
+                  <Play className="w-8 h-8 text-white" />
                 </div>
               </div>
               
-              <h3 className="font-medium text-foreground text-xs truncate group-hover:text-primary transition-colors">
+              <h3 className="font-medium text-foreground text-sm truncate group-hover:text-primary transition-colors">
                 {channel.name}
               </h3>
               <p className="text-xs text-muted-foreground truncate mt-1">
